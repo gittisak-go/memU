@@ -1,0 +1,2 @@
+# Allow .env.example to be tracked even though root .gitignore excludes .env.*
+!.env.example
