@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>memU — หน่วยความจำเชิงรุก 24/7 สำหรับ AI Agents</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2330;
+      --border: #30363d;
+      --purple: #7c3aed;
+      --purple-light: #a78bfa;
+      --blue: #2563eb;
+      --blue-light: #60a5fa;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --radius: 12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    a { color: var(--blue-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13,17,23,.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-brand {
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--purple-light), var(--blue-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a { color: var(--text-muted); font-size: .9rem; font-weight: 500; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      padding: 96px 24px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124,58,237,.25), transparent);
+      pointer-events: none;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(124,58,237,.15);
+      border: 1px solid rgba(124,58,237,.4);
+      color: var(--purple-light);
+      font-size: .8rem;
+      font-weight: 600;
+      padding: 4px 14px;
+      border-radius: 999px;
+      margin-bottom: 20px;
+      letter-spacing: .05em;
+    }
+    .hero h1 {
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 700;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #fff 30%, var(--purple-light) 70%, var(--blue-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 20px;
+    }
+    .hero p {
+      font-size: clamp(1rem, 2.5vw, 1.3rem);
+      color: var(--text-muted);
+      max-width: 560px;
+      margin: 0 auto 36px;
+    }
+    .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-block;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: .95rem;
+      transition: opacity .2s, transform .2s;
+      font-family: 'Sarabun', sans-serif;
+    }
+    .btn:hover { opacity: .85; transform: translateY(-1px); text-decoration: none; }
+    .btn-primary {
+      background: var(--purple);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* ── SECTION ── */
+    section { padding: 72px 24px; }
+    .container { max-width: 960px; margin: 0 auto; }
+    .section-label {
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--purple-light);
+      margin-bottom: 10px;
+    }
+    .section-title {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .section-desc { color: var(--text-muted); max-width: 560px; margin-bottom: 48px; font-size: 1rem; }
+
+    /* ── FEATURES ── */
+    #features { background: var(--surface); }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+    .card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      transition: border-color .2s, transform .2s;
+    }
+    .card:hover { border-color: var(--purple); transform: translateY(-3px); }
+    .card-icon { font-size: 2rem; margin-bottom: 14px; }
+    .card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; }
+    .card p { color: var(--text-muted); font-size: .93rem; }
+
+    /* ── ARCHITECTURE ── */
+    .layers { display: flex; flex-direction: column; gap: 14px; margin-top: 36px; }
+    .layer {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+    }
+    .layer-num {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: .9rem;
+      background: linear-gradient(135deg, var(--purple), var(--blue));
+      color: #fff;
+    }
+    .layer h3 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+    .layer p { color: var(--text-muted); font-size: .9rem; }
+
+    /* ── QUICK START ── */
+    #quickstart { background: var(--surface); }
+    .code-block {
+      background: #010409;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      overflow-x: auto;
+      margin-top: 20px;
+      position: relative;
+    }
+    .code-block pre { margin: 0; }
+    .code-block code {
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: .875rem;
+      line-height: 1.8;
+      white-space: pre;
+    }
+    .token-kw { color: var(--purple-light); }
+    .token-str { color: #a5f3ab; }
+    .token-cmt { color: #6e7681; font-style: italic; }
+    .token-fn { color: var(--blue-light); }
+    .token-num { color: #ffa657; }
+    .token-cls { color: #f0a8d0; }
+
+    /* ── API ── */
+    .api-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 36px; }
+    .api-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .api-card h3 {
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--blue-light);
+      margin-bottom: 10px;
+    }
+    .api-card p { color: var(--text-muted); font-size: .9rem; margin-bottom: 14px; }
+    .param-list { list-style: none; }
+    .param-list li {
+      display: flex;
+      gap: 10px;
+      font-size: .85rem;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .param-list li:last-child { border-bottom: none; }
+    .param-name {
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      color: var(--purple-light);
+      white-space: nowrap;
+    }
+    .param-desc { color: var(--text-muted); }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    .footer-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+    .footer-links a { color: var(--text-muted); font-size: .9rem; }
+    .footer-links a:hover { color: var(--text); text-decoration: none; }
+    footer p { font-size: .85rem; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      nav { padding: 0 16px; }
+      .nav-links { gap: 14px; }
+      .hero { padding: 64px 16px 56px; }
+      section { padding: 56px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-brand">memU</span>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#quickstart">Quick Start</a>
+    <a href="#api">API</a>
+    <a href="https://github.com/gittisak-go/memU" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="badge">🚀 AI Memory Layer</div>
+  <h1>memU</h1>
+  <p>หน่วยความจำเชิงรุก 24/7 สำหรับ AI Agents — จำ เรียนรู้ และปรับตัวให้เข้ากับผู้ใช้แต่ละคนโดยอัตโนมัติ</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="#quickstart">เริ่มต้นใช้งาน</a>
+    <a class="btn btn-secondary" href="https://github.com/gittisak-go/memU" target="_blank" rel="noopener">ดูบน GitHub</a>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">ทำไมต้อง memU?</h2>
+    <p class="section-desc">ออกแบบมาเพื่อให้ AI Agent ของคุณจำและเข้าใจผู้ใช้ได้อย่างชาญฉลาด ประหยัดเวลาและค่าใช้จ่าย</p>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-icon">🤖</div>
+        <h3>Agent ทำงานตลอด 24/7</h3>
+        <p>หน่วยความจำถาวรที่ทำงานข้ามเซสชันโดยไม่สูญหาย รองรับ multi-agent และ long-running workflows ได้อย่างราบรื่น</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎯</div>
+        <h3>จับเจตนาผู้ใช้อัตโนมัติ</h3>
+        <p>วิเคราะห์และสรุปความต้องการของผู้ใช้แต่ละคนอัตโนมัติ ทำให้ AI ตอบสนองได้แม่นยำและตรงประเด็นมากขึ้นทุกครั้ง</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">💰</div>
+        <h3>ประหยัด Token ค่าใช้จ่าย LLM</h3>
+        <p>ลด context window ที่ต้องส่งให้ LLM ด้วยการดึงเฉพาะ memory ที่เกี่ยวข้อง ช่วยลดค่าใช้จ่าย API ได้อย่างมีนัยสำคัญ</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="container">
+    <div class="section-label">Architecture</div>
+    <h2 class="section-title">โครงสร้าง 3 ชั้น</h2>
+    <p class="section-desc">memU จัดระเบียบข้อมูลเป็น 3 layers ที่เชื่อมต่อกันอย่างมีประสิทธิภาพ</p>
+    <div class="layers">
+      <div class="layer">
+        <div class="layer-num">1</div>
+        <div>
+          <h3>Resource</h3>
+          <p>ชั้นล่างสุด — เก็บข้อมูลดิบแบบ key-value พร้อม metadata และ timestamp รองรับ backend หลายแบบ เช่น SQLite, Redis, หรือ custom storage</p>
+        </div>
+      </div>
+      <div class="layer">
+        <div class="layer-num">2</div>
+        <div>
+          <h3>Item</h3>
+          <p>ชั้นกลาง — แพ็กเกจ resource หลายรายการเป็น memory item เดียว มีฟังก์ชันค้นหา semantic search และ relevance scoring เพื่อดึงข้อมูลที่เหมาะสม</p>
+        </div>
+      </div>
+      <div class="layer">
+        <div class="layer-num">3</div>
+        <div>
+          <h3>Category</h3>
+          <p>ชั้นบนสุด — จัดกลุ่ม item ตามบริบท เช่น user profile, task history, preferences ช่วยให้ agent เข้าถึงกลุ่ม memory ที่ต้องการได้รวดเร็ว</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUICK START -->
+<section id="quickstart">
+  <div class="container">
+    <div class="section-label">Quick Start</div>
+    <h2 class="section-title">เริ่มใช้งานใน 2 นาที</h2>
+    <p class="section-desc">ติดตั้งง่าย รวมเข้ากับโปรเจกต์ Python ได้ทันที</p>
+
+    <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:6px;">ติดตั้งผ่าน pip</p>
+    <div class="code-block">
+      <pre><code><span class="token-fn">pip</span> install memu</code></pre>
+    </div>
+
+    <p style="color:var(--text-muted);font-size:.9rem;margin-top:28px;margin-bottom:6px;">ตัวอย่างการใช้งานพื้นฐาน</p>
+    <div class="code-block">
+      <pre><code><span class="token-kw">from</span> memu <span class="token-kw">import</span> <span class="token-cls">MemU</span>
+
+<span class="token-cmt"># สร้าง instance</span>
+memory = <span class="token-cls">MemU</span>()
+
+<span class="token-cmt"># บันทึก memory</span>
+<span class="token-kw">await</span> memory.<span class="token-fn">memorize</span>(
+    user_id=<span class="token-str">"user_001"</span>,
+    content=<span class="token-str">"ผู้ใช้ชอบรับข้อมูลในรูปแบบ bullet points"</span>,
+    category=<span class="token-str">"preferences"</span>,
+)
+
+<span class="token-cmt"># ดึง memory ที่เกี่ยวข้อง</span>
+results = <span class="token-kw">await</span> memory.<span class="token-fn">retrieve</span>(
+    user_id=<span class="token-str">"user_001"</span>,
+    query=<span class="token-str">"รูปแบบการนำเสนอข้อมูล"</span>,
+    top_k=<span class="token-num">3</span>,
+)
+
+<span class="token-kw">for</span> item <span class="token-kw">in</span> results:
+    <span class="token-fn">print</span>(item.content)</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- API -->
+<section id="api">
+  <div class="container">
+    <div class="section-label">API Reference</div>
+    <h2 class="section-title">API หลัก</h2>
+    <p class="section-desc">ฟังก์ชันหลัก 2 ตัวสำหรับบันทึกและเรียกคืน memory</p>
+    <div class="api-grid">
+      <div class="api-card">
+        <h3>memorize()</h3>
+        <p>บันทึกข้อมูลลงใน memory store พร้อม metadata และ category</p>
+        <ul class="param-list">
+          <li>
+            <span class="param-name">user_id</span>
+            <span class="param-desc">str — รหัสผู้ใช้</span>
+          </li>
+          <li>
+            <span class="param-name">content</span>
+            <span class="param-desc">str — เนื้อหาที่ต้องการบันทึก</span>
+          </li>
+          <li>
+            <span class="param-name">category</span>
+            <span class="param-desc">str — หมวดหมู่ memory (optional)</span>
+          </li>
+          <li>
+            <span class="param-name">metadata</span>
+            <span class="param-desc">dict — ข้อมูลเพิ่มเติม (optional)</span>
+          </li>
+        </ul>
+      </div>
+      <div class="api-card">
+        <h3>retrieve()</h3>
+        <p>ดึง memory ที่เกี่ยวข้องมากที่สุดตาม query ด้วย semantic search</p>
+        <ul class="param-list">
+          <li>
+            <span class="param-name">user_id</span>
+            <span class="param-desc">str — รหัสผู้ใช้</span>
+          </li>
+          <li>
+            <span class="param-name">query</span>
+            <span class="param-desc">str — คำค้นหา / บริบท</span>
+          </li>
+          <li>
+            <span class="param-name">top_k</span>
+            <span class="param-desc">int — จำนวน memory สูงสุดที่ต้องการ</span>
+          </li>
+          <li>
+            <span class="param-name">category</span>
+            <span class="param-desc">str — กรองตามหมวดหมู่ (optional)</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-links">
+    <a href="https://github.com/gittisak-go/memU" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://pypi.org/project/memu/" target="_blank" rel="noopener">PyPI</a>
+    <a href="https://discord.gg/memu" target="_blank" rel="noopener">Discord</a>
+    <a href="https://twitter.com/gittisak_go" target="_blank" rel="noopener">Twitter</a>
+  </div>
+  <p>© 2025 memU — MIT License · สร้างด้วย ❤️ สำหรับ AI Agents</p>
+</footer>
+
+</body>
+</html>
