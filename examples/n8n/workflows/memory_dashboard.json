@@ -1,0 +1,135 @@
+{
+  "name": "memU Daily Memory Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "node-schedule-trigger",
+      "name": "Daily 08:00 Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.MEMU_API_URL }}/categories",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $env.DASHBOARD_USER_ID }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-get-categories",
+      "name": "Get Memory Categories",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a readable summary from memory categories\nconst data = $input.first().json;\nconst categories = data.categories || [];\n\nif (categories.length === 0) {\n  return [{ json: { summary: 'ยังไม่มีข้อมูลในหน่วยความจำ' } }];\n}\n\nconst lines = ['📋 สรุปความจำประจำวัน\\n'];\nfor (const cat of categories) {\n  if (cat.summary) {\n    lines.push(`• ${cat.name}: ${cat.summary.substring(0, 200)}`);\n  }\n}\n\nreturn [{ json: { summary: lines.join('\\n') } }];"
+      },
+      "id": "node-build-summary",
+      "name": "Build Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "to",
+              "value": "={{ $env.DASHBOARD_USER_ID }}"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([{ type: 'text', text: $json.summary }]) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-line-push",
+      "name": "LINE Push Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Daily 08:00 Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Memory Categories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Memory Categories": {
+      "main": [
+        [
+          {
+            "node": "Build Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Summary": {
+      "main": [
+        [
+          {
+            "node": "LINE Push Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
