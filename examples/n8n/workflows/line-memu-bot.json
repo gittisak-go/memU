@@ -1,0 +1,233 @@
+{
+  "name": "LINE + memU Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "LINE Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "line-webhook-id"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst events = body.events || [];\nif (!events.length) return [];\nconst event = events[0];\nif (event.type !== 'message' || event.message.type !== 'text') return [];\nreturn [{\n  json: {\n    userId: event.source.userId,\n    replyToken: event.replyToken,\n    text: event.message.text\n  }\n}];"
+      },
+      "id": "node-extract",
+      "name": "แยกข้อมูล LINE Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8001/retrieve",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "values": [
+            {
+              "name": "user_id",
+              "value": "={{ $json.userId }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "name": "modality",
+              "value": "conversation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-retrieve",
+      "name": "ดึงความจำ (retrieve)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "values": [
+            {
+              "name": "model",
+              "value": "gpt-4o-mini"
+            },
+            {
+              "name": "messages",
+              "value": "=[\n  {\n    \"role\": \"system\",\n    \"content\": \"คุณเป็นผู้ช่วย AI ที่ฉลาดและเป็นมิตร ตอบภาษาไทยเป็นหลัก\\n\\nข้อมูลความจำของผู้ใช้:\\n{{ $json.summary }}\"\n  },\n  {\n    \"role\": \"user\",\n    \"content\": \"{{ $('แยกข้อมูล LINE Event').item.json.text }}\"\n  }\n]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-openai",
+      "name": "OpenAI สร้างคำตอบ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8001/memorize",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "values": [
+            {
+              "name": "user_id",
+              "value": "={{ $('แยกข้อมูล LINE Event').item.json.userId }}"
+            },
+            {
+              "name": "text",
+              "value": "=User: {{ $('แยกข้อมูล LINE Event').item.json.text }}\nAssistant: {{ $json.choices[0].message.content }}"
+            },
+            {
+              "name": "modality",
+              "value": "conversation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-memorize",
+      "name": "บันทึกความจำ (memorize)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "values": [
+            {
+              "name": "replyToken",
+              "value": "={{ $('แยกข้อมูล LINE Event').item.json.replyToken }}"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"type\": \"text\", \"text\": \"{{ $('OpenAI สร้างคำตอบ').item.json.choices[0].message.content }}\"}]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-line-reply",
+      "name": "LINE ส่งคำตอบ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"status\": \"ok\"}",
+        "options": {}
+      },
+      "id": "node-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    }
+  ],
+  "connections": {
+    "LINE Webhook": {
+      "main": [
+        [
+          {
+            "node": "แยกข้อมูล LINE Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "แยกข้อมูล LINE Event": {
+      "main": [
+        [
+          {
+            "node": "ดึงความจำ (retrieve)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงความจำ (retrieve)": {
+      "main": [
+        [
+          {
+            "node": "OpenAI สร้างคำตอบ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI สร้างคำตอบ": {
+      "main": [
+        [
+          {
+            "node": "บันทึกความจำ (memorize)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกความจำ (memorize)": {
+      "main": [
+        [
+          {
+            "node": "LINE ส่งคำตอบ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LINE ส่งคำตอบ": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
