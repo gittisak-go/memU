@@ -1,0 +1,2 @@
+# อนุญาตให้ commit ไฟล์ .env.example เป็น template
+!.env.example
