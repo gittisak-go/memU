@@ -14,7 +14,7 @@
 
 <a href="https://trendshift.io/repositories/17374" target="_blank"><img src="https://trendshift.io/api/badge/repositories/17374" alt="NevaMind-AI%2FmemU | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
-**[English](readme/README_en.md) | [中文](readme/README_zh.md) | [日本語](readme/README_ja.md) | [한국어](readme/README_ko.md) | [Español](readme/README_es.md) | [Français](readme/README_fr.md)**
+**[English](readme/README_en.md) | [中文](readme/README_zh.md) | [日本語](readme/README_ja.md) | [한국어](readme/README_ko.md) | [Español](readme/README_es.md) | [Français](readme/README_fr.md) | [ภาษาไทย](readme/README_th.md)**
 
 </div>
 
@@ -565,6 +565,22 @@ View detailed experimental data: [memU-experiment](https://github.com/NevaMind-A
 - 🚀 [Try MemU Cloud](https://app.memu.so/quick-start)
 - 📚 [API Documentation](https://memu.pro/docs)
 - 💬 [Discord Community](https://discord.gg/memu)
+
+---
+
+## 🌱 memU for Communities
+
+memU is not just for tech companies. It belongs in schools, villages, and the hands of volunteers.
+
+| Use Case | Who It Helps | What memU Remembers |
+|----------|-------------|---------------------|
+| 🏫 **Teacher Assistant** | Teachers & Students | Each student's strengths, weaknesses, scores |
+| 👴 **Elderly Care** | Seniors & Families | Medications, appointments, symptoms |
+| 🏠 **Family Assistant** | Families | Schedules, birthdays, to-do lists |
+| 🌾 **Community Economy** | Villages & OTOP Groups | Income, expenses, members, inventory |
+| 🤝 **Drug Prevention** | Community Volunteers (อสม.) | Resources, activities, outcomes (privacy-first) |
+
+👉 **[See Thai Community Examples](examples/community/)** — runnable examples in Thai language
 
 ---
 
