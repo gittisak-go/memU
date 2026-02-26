@@ -1,0 +1,237 @@
+{
+  "name": "LINE + memU Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "line-webhook",
+        "options": {}
+      },
+      "id": "node-webhook-line",
+      "name": "LINE Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "line-memu-bot"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract LINE message data from webhook payload\nconst body = $input.first().json.body;\nconst events = body.events || [];\n\nconst results = [];\nfor (const event of events) {\n  if (event.type === 'message' && event.message && event.message.type === 'text') {\n    results.push({\n      json: {\n        userId: event.source.userId,\n        replyToken: event.replyToken,\n        userMessage: event.message.text\n      }\n    });\n  }\n}\n\nreturn results.length > 0 ? results : [{ json: { userId: '', replyToken: '', userMessage: '' } }];"
+      },
+      "id": "node-parse-line",
+      "name": "Parse LINE Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MEMU_API_URL }}/retrieve",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $json.userId }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.userMessage }}"
+            },
+            {
+              "name": "modality",
+              "value": "conversation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-retrieve-memory",
+      "name": "Retrieve Memory",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "complete",
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "คุณคือ AI Assistant ที่ฉลาดและช่วยเหลือผู้ใช้ภาษาไทย\n\nข้อมูลที่คุณจำเกี่ยวกับผู้ใช้คนนี้:\n{{ $('Retrieve Memory').first().json.memory_context || 'ยังไม่มีข้อมูลในหน่วยความจำ' }}\n\nโปรดตอบเป็นภาษาไทยอย่างเป็นธรรมชาติ"
+            },
+            {
+              "role": "user",
+              "content": "={{ $('Parse LINE Event').first().json.userMessage }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-openai-chat",
+      "name": "OpenAI Chat",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MEMU_API_URL }}/memorize",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $('Parse LINE Event').first().json.userId }}"
+            },
+            {
+              "name": "text",
+              "value": "=User: {{ $('Parse LINE Event').first().json.userMessage }}\nAssistant: {{ $json.message.content }}"
+            },
+            {
+              "name": "modality",
+              "value": "conversation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-memorize",
+      "name": "Memorize Conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "replyToken",
+              "value": "={{ $('Parse LINE Event').first().json.replyToken }}"
+            },
+            {
+              "name": "messages",
+              "value": "={{ JSON.stringify([{ type: 'text', text: $('OpenAI Chat').first().json.message.content }]) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-line-reply",
+      "name": "LINE Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "LINE Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse LINE Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse LINE Event": {
+      "main": [
+        [
+          {
+            "node": "Retrieve Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve Memory": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat": {
+      "main": [
+        [
+          {
+            "node": "Memorize Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memorize Conversation": {
+      "main": [
+        [
+          {
+            "node": "LINE Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
