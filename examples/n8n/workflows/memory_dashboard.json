@@ -1,0 +1,139 @@
+{
+  "name": "memU Memory Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-b5c6-7890-defa-123456789abc",
+      "name": "Schedule at 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// กำหนด user_id ที่ต้องการดึงข้อมูล\n// ในการใช้งานจริง สามารถดึงจาก database หรือ environment variable\nconst userId = $env.MEMU_DEFAULT_USER_ID || 'default_user';\nreturn [{ json: { userId } }];"
+      },
+      "id": "e2f3a4b5-c6d7-8901-efab-234567890bcd",
+      "name": "Set User ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://localhost:8001/categories/{{ $json.userId }}",
+        "options": {}
+      },
+      "id": "f3a4b5c6-d7e8-9012-fabc-345678901cde",
+      "name": "Get Memory Categories",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst userId = $('Set User ID').first().json.userId;\nconst categories = data.categories || [];\n\nif (categories.length === 0) {\n  return [{ json: { userId, summary: 'ยังไม่มีข้อมูลความทรงจำที่บันทึกไว้' } }];\n}\n\nconst today = new Date().toLocaleDateString('th-TH', {\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric',\n  timeZone: 'Asia/Bangkok'\n});\n\nlet summary = `📊 สรุปความทรงจำประจำวัน\\n${today}\\n\\n`;\n\ncategories.forEach((cat, index) => {\n  const name = cat.name || `หมวด ${index + 1}`;\n  const catSummary = cat.summary || 'ไม่มีข้อมูล';\n  summary += `📁 ${name}\\n${catSummary}\\n\\n`;\n});\n\nsummary += `\\n✨ มีทั้งหมด ${categories.length} หมวดหมู่`;\n\nreturn [{ json: { userId, summary } }];"
+      },
+      "id": "a4b5c6d7-e8f9-0123-abcd-456789012def",
+      "name": "Format Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LINE_CHANNEL_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"{{ $json.userId }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"{{ $json.summary }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "b5c6d7e8-f9a0-1234-bcde-567890123efa",
+      "name": "LINE Push Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Schedule at 08:00": {
+      "main": [
+        [
+          {
+            "node": "Set User ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set User ID": {
+      "main": [
+        [
+          {
+            "node": "Get Memory Categories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Memory Categories": {
+      "main": [
+        [
+          {
+            "node": "Format Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Summary": {
+      "main": [
+        [
+          {
+            "node": "LINE Push Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "memu-n8n-dashboard"
+  },
+  "id": "memory-dashboard-workflow",
+  "tags": ["memu", "dashboard", "schedule", "line"]
+}
