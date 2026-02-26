@@ -1,0 +1,115 @@
+{
+  "name": "memU Memory Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "node-schedule",
+      "name": "ทุกวัน 8:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://localhost:8001/categories?user_id={{ $json.userId || 'all' }}",
+        "options": {}
+      },
+      "id": "node-categories",
+      "name": "ดึงหมวดหมู่ความจำ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const categories = $input.first().json.categories || [];\nif (!categories.length) {\n  return [{ json: { summary: 'ยังไม่มีความจำที่บันทึกไว้' } }];\n}\nconst lines = categories.map((cat, i) => `${i + 1}. ${cat.name}: ${cat.summary || '(ยังไม่มีสรุป)'}`);\nconst summary = '📊 สรุปความจำประจำวัน\\n\\n' + lines.join('\\n');\nreturn [{ json: { summary } }];"
+      },
+      "id": "node-format",
+      "name": "สร้างสรุปประจำวัน",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "values": [
+            {
+              "name": "to",
+              "value": "YOUR_LINE_USER_ID"
+            },
+            {
+              "name": "messages",
+              "value": "=[{\"type\": \"text\", \"text\": \"{{ $json.summary }}\"}]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-push",
+      "name": "LINE Push สรุปความจำ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "ทุกวัน 8:00": {
+      "main": [
+        [
+          {
+            "node": "ดึงหมวดหมู่ความจำ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ดึงหมวดหมู่ความจำ": {
+      "main": [
+        [
+          {
+            "node": "สร้างสรุปประจำวัน",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "สร้างสรุปประจำวัน": {
+      "main": [
+        [
+          {
+            "node": "LINE Push สรุปความจำ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
